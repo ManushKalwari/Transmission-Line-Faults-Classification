@@ -1,0 +1,41 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+fault_files = [
+    'AB', 'BC', 'AC', 'AG', 'BG', 'CG',
+    'ABG', 'BCG', 'ACG', 'ABC', 'ABCG', 'No'
+]
+
+file_paths = [f'/content/Fault_{file}.xlsx' for file in fault_files]
+dfs = [pd.read_excel(path) for path in file_paths]
+
+# Adding 'Type' column to each DataFrame
+for i, df in enumerate(dfs):
+    df['Type'] = fault_files[i]
+
+df_AllFaults = pd.concat(dfs, ignore_index=True)
+
+df_ideal = pd.read_excel('/content/Ideal_All.xlsx')
+
+# Calculating mean absolute errors
+df_AllFaults['dVa_error'] = np.abs(df_AllFaults['A'] - df_ideal['A'])
+df_AllFaults['dVb_error'] = np.abs(df_AllFaults['B'] - df_ideal['B'])
+df_AllFaults['dVc_error'] = np.abs(df_AllFaults['C'] - df_ideal['C'])
+
+# Calculating mean absolute errors for each fault type and phase
+df_AllFaults_0 = df_AllFaults.loc[df_AllFaults['Type'] == 'No']
+fault_types_0 = df_AllFaults_0['Distance'].unique()
+mean_values = {}
+
+#windowing 
+for fault_type in fault_types_0:
+    for phase in ['Va', 'Vb', 'Vc']:
+        mean_values[f'{fault_type}_{phase}'] = df_AllFaults_0.loc[
+            df_AllFaults_0['Distance'] == fault_type, f'dV{phase[1]}_error'
+        ].mean()
+
+mean_df = pd.DataFrame(mean_values.items(), columns=['Type', 'Mean Absolute Error'])
+mean_df[['Fault_Type', 'Phase']] = expectation_df['Type'].str.split('_', expand=True)
+mean_df_short = mean_df[:51].drop('Type', axis=1)
+
